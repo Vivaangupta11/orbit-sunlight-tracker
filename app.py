@@ -245,7 +245,7 @@ def show_results(catnr, chosen):
     day_iso = chosen.isoformat()
 
     with st.spinner(f'Calculating a year of sunlight and shadow for {sat.name} and the ISS. '
-                    f'The first time takes about a minute...'):
+                    f'This may take a few minutes...'):
         period, shadow, pct = check_orbit(sat, chosen)
         iss_period, iss_shadow, iss_pct = check_orbit(iss, chosen)
         hours, sat_sun = day_series(catnr, day_iso)
