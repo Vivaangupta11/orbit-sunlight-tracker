@@ -3,6 +3,9 @@
 import base64
 import math
 import os
+import io
+import urllib.request
+from skyfield.iokit import parse_tle_file
 from datetime import date, timedelta
 
 import numpy as np
@@ -90,14 +93,34 @@ def load_basics():
 ts, eph = load_basics()
 
 
+@st.cache_resource
+def load_saved_tles():
+    """Read the orbit data saved in tles.txt into a dictionary: catalog number -> satellite."""
+    if not os.path.exists('tles.txt'):
+        return {}
+    sats = load.tle_file('tles.txt')
+    return {s.model.satnum: s for s in sats}
+
+
+def download_tle(catnr):
+    """Try CelesTrak directly, but give up after 10 seconds."""
+    url = f'https://celestrak.org/NORAD/elements/gp.php?CATNR={catnr}&FORMAT=tle'
+    with urllib.request.urlopen(url, timeout=10) as response:
+        data = response.read()
+    sats = list(parse_tle_file(io.BytesIO(data), ts))
+    return sats[0] if sats else None
+
+
 @st.cache_resource(ttl=6 * 3600, show_spinner=False)
 def get_satellite(catnr):
-    """Download fresh orbit data from CelesTrak (re-downloaded every 6 hours)."""
-    url = f'https://celestrak.org/NORAD/elements/gp.php?CATNR={catnr}&FORMAT=tle'
-    sats = load.tle_file(url, filename=f'sat_{catnr}.tle', reload=True)
-    if len(sats) == 0:
+    """Use the saved file first. If the satellite isn't there, try CelesTrak."""
+    saved = load_saved_tles()
+    if catnr in saved:
+        return saved[catnr]
+    try:
+        return download_tle(catnr)
+    except Exception:
         return None
-    return sats[0]
 
 
 # ---------- Your calculations ----------
@@ -237,7 +260,7 @@ def show_results(catnr, chosen):
 
     html(f'<h3 style="margin-top:30px;">Results for {sat.name}</h3>'
          f'<p class="muted">Tilt {sat_tilt:.1f}° · one orbit takes {period:.1f} minutes · '
-         f'compared with the ISS ({iss_tilt:.1f}° tilt)</p>')
+         f'compared with the ISS ({iss_tilt:.1f}° tilt) · orbit data from {sat.epoch.utc_strftime("%d %b %Y")}</p>')
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric('Shadow on one orbit', f'{shadow} min', delta=f'{shadow - iss_shadow:+d} min vs ISS', delta_color='inverse')
