@@ -148,19 +148,24 @@ def day_series(catnr, day_iso):
     return np.arange(1440) / 60, sunlit
 
 
-@st.cache_data(ttl=6 * 3600, show_spinner=False)
+@st.cache_data(ttl=6 * 3600, show_spinner=False, max_entries=50)
 def year_series(catnr, start_iso):
-    """Average minutes in shadow per orbit, for each day of a year."""
+    """Average minutes in shadow per orbit, for each day of a year (worked out 30 days at a time)."""
     sat = get_satellite(catnr)
     start = date.fromisoformat(start_iso)
     orbits_per_day = 1440 / orbit_period(sat)
     dates, shadow = [], []
-    for i in range(365):
-        d = start + timedelta(days=i)
-        times = ts.utc(d.year, d.month, d.day, 0, range(1440))
-        sunlit = sat.at(times).is_sunlit(eph)
-        dates.append(d)
-        shadow.append(float((1440 - np.count_nonzero(sunlit)) / orbits_per_day))
+
+    for first_day in range(0, 365, 30):                  # 0, 30, 60 ... one batch per 30 days
+        n_days = min(30, 365 - first_day)                # the last batch is shorter
+        d0 = start + timedelta(days=first_day)
+        times = ts.utc(d0.year, d0.month, d0.day, 0, range(n_days * 1440))   # every minute of the batch
+        sunlit = np.array(sat.at(times).is_sunlit(eph)).reshape(n_days, 1440)  # one row per day
+
+        for k in range(n_days):
+            dates.append(d0 + timedelta(days=k))
+            shadow.append(float((1440 - np.count_nonzero(sunlit[k])) / orbits_per_day))
+
     return dates, shadow
 
 
