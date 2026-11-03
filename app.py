@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import streamlit as st
+import streamlit.components.v1 as components
 from skyfield.api import load
 
 st.set_page_config(page_title='Orbit Sunlight Tracker', page_icon='🛰️', layout='wide')
@@ -20,7 +21,7 @@ ISS_NUMBER = 25544
 
 # The 10 satellite cards. Put matching photos in an "images" folder (optional).
 SATELLITES = [
-    {'name': 'Hubble Space Telescope', 'catnr': 20580, 'img': 'images/hubble.jpg',     'blurb': 'NASA/ESA space telescope'},
+    {'name': 'Hubble Space Telescope', 'catnr': 20580, 'img': 'https://www.salon.com/app/uploads/2022/04/hubble-space-telescope-0420221.jpg',     'blurb': 'NASA/ESA space telescope'},
     {'name': 'Tiangong',               'catnr': 48274, 'img': 'images/tiangong.jpg',   'blurb': "China's space station"},
     {'name': 'Sentinel-1C',            'catnr': 62261, 'img': 'images/sentinel1c.jpg', 'blurb': 'ESA radar satellite, dawn-dusk orbit'},
     {'name': 'Sentinel-1A',            'catnr': 39634, 'img': 'images/sentinel1a.jpg', 'blurb': 'Same orbit as Sentinel-1C'},
@@ -85,7 +86,7 @@ html("""
 """)
 
 
-# ---------- Setup (cached: loaded once, shared by every visitor) ----------
+# ---------- Setup (cached: loaded once) ----------
 @st.cache_resource
 def load_basics():
     return load.timescale(), load('de421.bsp')
@@ -122,8 +123,6 @@ def get_satellite(catnr):
     except Exception:
         return None
 
-
-# ---------- Your calculations ----------
 def orbit_period(sat):
     return 2 * math.pi / sat.model.no_kozai
 
@@ -304,6 +303,11 @@ def card_image(path):
             '<line x1="60" y1="22" x2="60" y2="10" stroke="#cfd6e6" stroke-width="2"/>'
             '<circle cx="60" cy="9" r="3" fill="#cfd6e6"/></svg></div>')
 
+def pick(catnr):
+    """Remember which satellite was picked, and that the page should scroll to the results."""
+    st.session_state['selected'] = catnr
+    st.session_state['scroll_now'] = True
+    st.session_state['scroll_count'] = st.session_state.get('scroll_count', 0) + 1
 
 # =====================================================================
 # HOME
@@ -385,7 +389,7 @@ for row in (SATELLITES[:5], SATELLITES[5:]):
                 html(card_image(s['img']))
                 html(f'<p style="margin:10px 0 0;"><b>{s["name"]}</b><br><span class="muted">{s["blurb"]}</span></p>')
                 if st.button('Check', key=f'btn_{s["catnr"]}'):
-                    st.session_state['selected'] = s['catnr']
+                    pick(s['catnr'])
 
 html('<p class="muted" style="margin-top:18px;">Or check any satellite by its NORAD catalog number:</p>')
 n1, n2 = st.columns([3, 1])
@@ -394,11 +398,22 @@ with n1:
 with n2:
     if st.button('Check this number'):
         if typed.strip().isdigit():
-            st.session_state['selected'] = int(typed.strip())
+            pick(int(typed.strip()))
         else:
             st.warning('Please type numbers only.')
 
 if 'selected' in st.session_state:
+    html('<div id="results" class="anchor"></div>')     
+
+    if st.session_state.get('scroll_now'):
+        components.html(f"""
+        <script>
+        // click number {st.session_state['scroll_count']} (makes this script new each time, so it runs again)
+        window.parent.document.getElementById('results').scrollIntoView({{behavior: 'smooth'}});
+        </script>
+        """, height=0)
+        st.session_state['scroll_now'] = False          
+
     show_results(st.session_state['selected'], chosen)
 
 # =====================================================================
