@@ -21,7 +21,7 @@ ISS_NUMBER = 25544
 
 # The 10 satellite cards. Put matching photos in an "images" folder (optional).
 SATELLITES = [
-    {'name': 'Hubble Space Telescope', 'catnr': 20580, 'img': 'https://www.salon.com/app/uploads/2022/04/hubble-space-telescope-0420221.jpg',     'blurb': 'NASA/ESA space telescope'},
+    {'name': 'Hubble Space Telescope', 'catnr': 20580, 'img': 'images/hubble.jpg',     'blurb': 'NASA/ESA space telescope'},
     {'name': 'Tiangong',               'catnr': 48274, 'img': 'images/tiangong.jpg',   'blurb': "China's space station"},
     {'name': 'Sentinel-1C',            'catnr': 62261, 'img': 'images/sentinel1c.jpg', 'blurb': 'ESA radar satellite, dawn-dusk orbit'},
     {'name': 'Sentinel-1A',            'catnr': 39634, 'img': 'images/sentinel1a.jpg', 'blurb': 'Same orbit as Sentinel-1C'},
